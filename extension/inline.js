@@ -16,6 +16,9 @@ webpg.inline = {
             doc - <document> The document object to parse
     */
     init: function(doc) {
+        if (webpg.preferences && webpg.preferences.decorate_inline.get() != "true")
+            return;
+
         // Initialize webpg.doc
         this.doc = doc;
 
@@ -27,14 +30,14 @@ webpg.inline = {
             if(typeof(doc.nodeName)!='undefined' && doc.nodeName != "#document")
                 return;
 
-	        // Don't parse Firefox chrome pages
-	        try {
-	            if(doc.location.protocol == "chrome:")
-		            return;
-		    } catch (err) {
-		        return;
-		    }
-		}
+            // Don't parse Firefox chrome pages
+            try {
+                if(doc.location.protocol == "chrome:")
+                    return;
+            } catch (err) {
+                return;
+            }
+        }
 
         webpg.inline.PGPDataSearch(doc);
     },
@@ -48,19 +51,19 @@ webpg.inline = {
             doc - <document> The document to search
     */
     PGPDataSearch: function(doc) {
-	    var filter = function(node) {
-		    return NodeFilter.FILTER_ACCEPT;
-	    };
+        var filter = function(node) {
+            return NodeFilter.FILTER_ACCEPT;
+        };
 
-	    var haveStart = false;
-	    var blockType;
-	    var tw = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_TEXT, filter, false);
-	    var node, range, idx, search, baseIdx;
+        var haveStart = false;
+        var blockType;
+        var tw = doc.createTreeWalker(doc.documentElement, NodeFilter.SHOW_TEXT, filter, false);
+        var node, range, idx, search, baseIdx;
 
-	    while((node = tw.nextNode())) {
-		    idx = 0;
-		    while(true) {
-			    if(!haveStart) {
+        while((node = tw.nextNode())) {
+            idx = 0;
+            while(true) {
+                if(!haveStart) {
 
                     if (node.textContent.indexOf(webpg.constants.PGPTags.PGP_DATA_BEGIN, idx) == -1)
                         break;
@@ -77,69 +80,69 @@ webpg.inline = {
                     }
 
                     baseIdx = idx;
-				    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_KEY_BEGIN, baseIdx);
+                    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_KEY_BEGIN, baseIdx);
                     blockType = webpg.constants.PGPBlocks.PGP_KEY;
-				    search = webpg.constants.PGPTags.PGP_KEY_END;
-				    if(idx == -1   || idx > node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNATURE_BEGIN, baseIdx)) {
-					    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNATURE_BEGIN, baseIdx);
-					    search = webpg.constants.PGPTags.PGP_SIGNATURE_END;
+                    search = webpg.constants.PGPTags.PGP_KEY_END;
+                    if(idx == -1   || idx > node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNATURE_BEGIN, baseIdx)) {
+                        idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNATURE_BEGIN, baseIdx);
+                        search = webpg.constants.PGPTags.PGP_SIGNATURE_END;
                         blockType = webpg.constants.PGPBlocks.PGP_SIGNATURE;
-				    }
-				    if(idx == -1   || idx > node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNED_MSG_BEGIN, baseIdx)) {
-					    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNED_MSG_BEGIN, baseIdx);
-					    search = webpg.constants.PGPTags.PGP_SIGNATURE_END;
+                    }
+                    if(idx == -1   || idx > node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNED_MSG_BEGIN, baseIdx)) {
+                        idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_SIGNED_MSG_BEGIN, baseIdx);
+                        search = webpg.constants.PGPTags.PGP_SIGNATURE_END;
                         blockType = webpg.constants.PGPBlocks.PGP_SIGNED_MSG;
-				    }
-				    if(idx == -1 || idx < node.textContent.indexOf(webpg.constants.PGPTags.PGP_ENCRYPTED_BEGIN, baseIdx)) {
-					    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_ENCRYPTED_BEGIN, baseIdx);
-					    search = webpg.constants.PGPTags.PGP_ENCRYPTED_END;
+                    }
+                    if(idx == -1 || idx < node.textContent.indexOf(webpg.constants.PGPTags.PGP_ENCRYPTED_BEGIN, baseIdx)) {
+                        idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_ENCRYPTED_BEGIN, baseIdx);
+                        search = webpg.constants.PGPTags.PGP_ENCRYPTED_END;
                         blockType = webpg.constants.PGPBlocks.PGP_ENCRYPTED;
-				    }
-				    if(idx == -1 || idx < node.textContent.indexOf(webpg.constants.PGPTags.PGP_KEY_BEGIN, baseIdx)) {
-					    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_KEY_BEGIN, baseIdx);
-					    search = webpg.constants.PGPTags.PGP_KEY_END;
-					    blockType = webpg.constants.PGPBlocks.PGP_KEY;
-				    }
-				    if(idx == -1 || idx < node.textContent.indexOf(webpg.constants.PGPTags.PGP_PKEY_BEGIN, baseIdx)) {
-					    idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_PKEY_BEGIN, baseIdx);
-					    search = webpg.constants.PGPTags.PGP_PKEY_END;
-					    blockType = webpg.constants.PGPBlocks.PGP_PKEY;
-				    }
+                    }
+                    if(idx == -1 || idx < node.textContent.indexOf(webpg.constants.PGPTags.PGP_KEY_BEGIN, baseIdx)) {
+                        idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_KEY_BEGIN, baseIdx);
+                        search = webpg.constants.PGPTags.PGP_KEY_END;
+                        blockType = webpg.constants.PGPBlocks.PGP_KEY;
+                    }
+                    if(idx == -1 || idx < node.textContent.indexOf(webpg.constants.PGPTags.PGP_PKEY_BEGIN, baseIdx)) {
+                        idx = node.textContent.indexOf(webpg.constants.PGPTags.PGP_PKEY_BEGIN, baseIdx);
+                        search = webpg.constants.PGPTags.PGP_PKEY_END;
+                        blockType = webpg.constants.PGPBlocks.PGP_PKEY;
+                    }
 
-				    if(idx == -1)
+                    if(idx == -1)
                         break;
 
-				    haveStart = true;
-				    range = document.createRange();
-				    range.setStart(node, idx);
-				    idx += 6;
-			    }
-			    if(haveStart) {
-	                var filter = function(node) {
-		                return NodeFilter.FILTER_ACCEPT;
-	                };
+                    haveStart = true;
+                    range = document.createRange();
+                    range.setStart(node, idx);
+                    idx += 6;
+                }
+                if(haveStart) {
+                    var filter = function(node) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    };
 
                     tryOne = node.textContent.indexOf(search, idx);
 
                     if(tryOne == -1)
-					    break;
+                        break;
 
-				    idx = node.textContent.indexOf(search,
-				        this.ignoreInners(idx, tryOne, node.textContent));
+                    idx = node.textContent.indexOf(search,
+                        this.ignoreInners(idx, tryOne, node.textContent));
 
                     if(idx == -1) {
-					    break;
-				    }
+                        break;
+                    }
 
                     haveStart = false;
-				    range.setEnd(node, idx + search.length);
+                    range.setEnd(node, idx + search.length);
 
-				    webpg.inline.PGPBlockParse(range, node, blockType);
-				    range.detach();
-				    idx =0; //+= search.length;
-			    }
-		    }
-    	}
+                    webpg.inline.PGPBlockParse(range, node, blockType);
+                    range.detach();
+                    idx =0; //+= search.length;
+                }
+            }
+        }
     },
 
     /*
@@ -194,16 +197,39 @@ webpg.inline = {
     */
     PGPBlockParse: function(range, node, blockType) {
         var s = new XMLSerializer();
-	    var d = range.cloneContents();
-	    var str = s.serializeToString(d);
+        var d = range.cloneContents();
+        var str = s.serializeToString(d);
+        var xmlnsReg = new RegExp(" xmlns=\"http://www.w3.org/1999/xhtml\"", "gi");
 
-        if (str.search(" xmlns=\"http://www.w3.org/1999/xhtml\"") > -1) {
-            if (node.parentElement.innerHTML.search(" xmlns=\"http://www.w3.org/1999/xhtml\"")) {
-                str = str.replace(" xmlns=\"http://www.w3.org/1999/xhtml\"", "")
-            }
+        str = str.replace(xmlnsReg, "");
+
+        var html = node.parentElement.innerHTML;
+
+        while (html.lastIndexOf("\n") + 1 == html.length) {
+            html = html.substring(0, html.lastIndexOf("\n"));
         }
 
-        var content = str; //webpg.utils.dataSelection.scrub(str);
+        var scontent = (webpg.utils.detectedBrowser == "chrome") ?
+                node.parentElement.innerText :
+                node.parentNode.textContent;
+
+        // The html contents posted to element is the textContent or innerText
+        //  of the element with detected PGP Blocks
+        var h = document.createElement("pre");
+        jQuery(h).html(scontent);
+        var phtml = h.innerHTML;
+
+        if (scontent == phtml) {
+            if (webpg.utils.detectedBrowser == "chrome") {
+                scontent = html;
+            } else {
+                reg = new RegExp("(&(.){1,4};)", "g")
+                if (html.search(reg) > -1)
+                    scontent = phtml;
+                else
+                    scontent = html
+            }
+        }
 
         var fragment = range.extractContents();
 
@@ -211,13 +237,13 @@ webpg.inline = {
 
         switch(blockType) {
             case webpg.constants.PGPBlocks.PGP_KEY:
-                console.log("we found a public key");
+                console.log("WebPG found a public key");
                 if (webpg.utils.detectedBrowser == "firefox") {
                     webpg.utils.sendRequest({
                         'msg': "sendtoiframe",
                         'block_type': blockType,
                         'target_id': results_frame.id,
-                        'original_text': content
+                        'original_text': scontent
                     });
                 } else {
                     results_frame.onload = function(){
@@ -225,33 +251,33 @@ webpg.inline = {
                             'msg': "sendtoiframe",
                             'block_type': blockType,
                             'target_id': results_frame.id,
-                            'original_text': content
+                            'original_text': scontent
                         });
                     };
                 }
                 break;
 
             case webpg.constants.PGPBlocks.PGP_PKEY:
-                console.log("we found a private key, which is scary when you think about it... exiting");
+                console.log("WebPG found a private key, which is scary when you think about it... exiting");
                 break;
 
             case webpg.constants.PGPBlocks.PGP_SIGNED_MSG:
                 // check for the required PGP BLOCKS
-                console.log("we found a signed message");
-                if (content.indexOf(webpg.constants.PGPTags.PGP_DATA_BEGIN) != -1 &&
-                    content.indexOf("\n" + webpg.constants.PGPTags.PGP_SIGNATURE_BEGIN) != -1 &&
-                    content.indexOf("\n" + webpg.constants.PGPTags.PGP_SIGNATURE_END) != -1 ) {
+                console.log("WebPG found a signed message");
+                if (scontent.indexOf(webpg.constants.PGPTags.PGP_DATA_BEGIN) != -1 &&
+                    scontent.indexOf("\n" + webpg.constants.PGPTags.PGP_SIGNATURE_BEGIN) != -1 &&
+                    scontent.indexOf("\n" + webpg.constants.PGPTags.PGP_SIGNATURE_END) != -1 ) {
                 } else {
-                    if (content.indexOf(" " + webpg.constants.PGPTags.PGP_SIGNATURE_END) != -1) {
-                        console.log("we found a signed message with bad formatting");
+                    if (scontent.indexOf(" " + webpg.constants.PGPTags.PGP_SIGNATURE_END) != -1) {
+                        console.log("WebPG found a signed message with bad formatting");
                     } else {
-                        console.log("we found an incomplete signed message");
+                        console.log("WebPG found an incomplete signed message");
                     }
                     return
                 }
                 webpg.utils.sendRequest({
                     msg: 'verify',
-                    data: content},
+                    data: scontent},
                     function(response) {
                         if (response.result.gpg_error_code == "58" || !response.result.error) {
                             webpg.utils.sendRequest({
@@ -261,9 +287,9 @@ webpg.inline = {
                                 'verify_result': response.result}
                             );
                         } else {
-                            $(results_frame).hide();
-                            $(element).children(".original").show();
-                            $(element).children(".pretext, .postext").hide();
+                            jQuery(results_frame).hide();
+                            jQuery(element).children(".original").show();
+                            jQuery(element).children(".pretext, .postext").hide();
                             console.log("error processing signed message", response.result);
                         }
                     }
@@ -273,15 +299,15 @@ webpg.inline = {
             case webpg.constants.PGPBlocks.PGP_SIGNATURE:
                 // This should never be reached, because our parser should
                 //  normally catch both the text, and the detached sig
-                console.log("we found a detached signature, but we don't have the file - exiting");
+                console.log("WebPG found a detached signature, but we don't have the file - exiting");
                 break;
 
             case webpg.constants.PGPBlocks.PGP_ENCRYPTED:
-                console.log("we found an encrypted or signed message");
+                console.log("WebPG found an encrypted or signed message");
                 webpg.utils.sendRequest({
-                    // We found a PGP MESSAGE, but it could be a signed. Lets gpgVerify first
+                    // WebPG found a PGP MESSAGE, but it could be a signed. Lets gpgVerify first
                     msg: 'verify',
-                    data: content,
+                    data: scontent,
                     target_id: results_frame.id },
                     function(response) {
                         if (response.result.signatures && response.result.data)
@@ -298,7 +324,6 @@ webpg.inline = {
                 );
                 break;
         }
-                   
     },
 
     /*
@@ -347,8 +372,8 @@ webpg.inline = {
     */
     addResultsReplacementFrame: function(element){
         var iframe = this.addResultsFrame();
-        $(iframe).insertAfter($(element)); //.insertAfter($(element), );
-        $(element).hide();
+        jQuery(iframe).insertAfter(jQuery(element));
+        jQuery(element).hide();
         var theURL = webpg.utils.resourcePath + "webpg_results.html?id=" + iframe.id;
         if (webpg.utils.detectedBrowser == "firefox")
             iframe.contentWindow.location.href = theURL;
@@ -376,3 +401,4 @@ webpg.inline = {
         return iframe;
     },
 }
+/* ]]> */
