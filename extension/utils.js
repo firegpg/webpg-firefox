@@ -12,7 +12,7 @@ webpg.utils = {
             Initializes the webpg.utils object and setups up required overrides.
     */
     init: function() {
-        if (navigator.userAgent.toLowerCase().search("firefox") > -1) {
+        if (this.detectedBrowser == "firefox" || this.detectedBrowser == "thunderbird") {
             // We are using Firefox, so make `console.log` an alias to
             //  something that provides more information than the standard
             //  console logging utility.
@@ -31,7 +31,7 @@ webpg.utils = {
             // Proxy the newly set console.log method to make it more like the
             //  chrome console logger, i.e. accept multiple arguments, output
             //  objects as strings and display line numbers (stack trace)
-            (function( $, oldLogMethod){
+            (function(jQuery, oldLogMethod){
                 console.log = function(){
                     // Iterate through the passed arguments (if any)
                     for (var i=0; i<arguments.length; i++) {
@@ -75,6 +75,8 @@ webpg.utils = {
             return "firefox";
         else if (navigator.userAgent.toLowerCase().search("chrome") > -1)
             return "chrome";
+        else if (navigator.userAgent.toLowerCase().search("thunderbird") > -1)
+            return "thunderbird";
         else
             return "unknown";
     })(),
@@ -84,14 +86,15 @@ webpg.utils = {
             Determines the base path for extension resources. This is a self
             executing method.
     */
-    resourcePath: (function() {
-        if (navigator.userAgent.toLowerCase().search("firefox") > -1)
+    resourcePath: function() {
+        if (navigator.userAgent.toLowerCase().search("firefox") > -1 ||
+        navigator.userAgent.toLowerCase().search("thunderbird") > -1)
             return "chrome://webpg-firefox/content/";   
         else if (navigator.userAgent.toLowerCase().search("chrome") > -1)
             return chrome.extension.getURL("");
         else
             return "/";
-    })(),
+    }(),
 
     /*
         Function: getParameterByName
@@ -130,6 +133,24 @@ webpg.utils = {
         }
     },
 
+    formatSearchParameter: function(item) {
+        var pParam = item.split(":")[0];
+        var pValue = item.split(":")[1];
+
+        if (pValue != "true" && pValue != "false"
+        && isNaN(pValue)) {
+            return item.replace(
+                    new RegExp("(.*?):(.*)", "g"
+                ),
+                "\"$1\":\"$2\"");
+        } else {
+            return item.replace(
+                    new RegExp("(.*?):(.*)", "g"
+                ),
+                "\"$1\":$2");
+        }
+    },
+
     /*
         Function: isValidEmailAddress
             Parses a given string to ensure it is a valid email address;
@@ -146,17 +167,36 @@ webpg.utils = {
         return pattern.test(emailAddress);
     },
 
+    escape: function(str) {
+        var map = {
+            "&" : "amp",
+            "'": "#39",
+            '"': "quot",
+            "<": "lt",
+            ">": "gt"
+
+        };
+
+        return str.replace( /[&'"<>]/g, function(m) {
+            return "&" + map[m] + ";";
+        });
+    },
+
     /*
-        Function: onRequest.addListener
+        Function: _onRequest.addListener
             This function creates a listener object for interaction between
             privileged and non-privileged pages
 
         Parameters:
             callback - <func> The callback to be called upon completion
     */
-    onRequest: {
+    //  This method had to be renamed to _onRequest in order to pass
+    //  validation for addons.mozilla.org, which erroneously detects
+    //  this as a handleEvent call, not a user defined method. Lame.
+    _onRequest: {
         addListener: function(callback) { // analogue of chrome.extension.onRequest.addListener
-            if (navigator.userAgent.toLowerCase().search("firefox") > -1) {
+            if (webpg.utils.detectedBrowser == "firefox" ||
+            webpg.utils.detectedBrowser == "thunderbird") {
                 return document.addEventListener("listener-query", function(event) {
                     var node = event.target, doc = node.ownerDocument;
 
@@ -172,7 +212,7 @@ webpg.utils = {
                         return node.dispatchEvent(listener);
                     });
                 }, false, true);
-            } else {
+            } else if (webpg.utils.detectedBrowser == "chrome") {
                 chrome.extension.onRequest.addListener(callback);
             }
         },
@@ -188,7 +228,7 @@ webpg.utils = {
             doc - <document> The document to add the listener to 
     */
     sendRequest: function(data, callback, doc) { // analogue of chrome.extension.sendRequest
-        if (navigator.userAgent.toLowerCase().search("firefox") > -1) {
+        if (this.detectedBrowser == "firefox" || this.detectedBrowser == "thunderbird") {
             var request = document.createTextNode("");
             request.setUserData("data", data, null);
             if (callback) {
@@ -258,7 +298,7 @@ webpg.utils = {
                     return iframes[i];
             }
         } else {
-            var iframe = $("#" + id);
+            var iframe = jQuery("#" + id);
             if (iframe)
                 return iframe[0];
         }
@@ -330,7 +370,13 @@ webpg.utils = {
                 break;
 
             case "chrome":
-                chrome.tabs.create({'url': url, 'index': tabIndex})
+                if (tabIndex) {
+                    chrome.tabs.create({'url': url, 'index': tabIndex})
+                } else {
+                    chrome.tabs.getSelected(null, function(tab) { 
+                        chrome.tabs.create({'url': url, 'index': tab.index});
+                    });
+                }
                 break;
         }
     },
@@ -363,7 +409,7 @@ webpg.utils = {
             var selectionText = selectionObject.toString();
         }
 
-        if (!selectionText.length > 0 && selectionTarget) {
+        if ((!selectionText || !selectionText.length > 0) && selectionTarget) {
             selectionText = selectionTarget.value;
             var preSelection = null;
             var postSelection = null;
@@ -384,7 +430,7 @@ webpg.utils = {
         */
         removeAll: function(callback) {
             if (webpg.utils.detectedBrowser == "firefox") {
-                $(".context-menu-item").each(function(iter, element) {
+                jQuery(".context-menu-item").each(function(iter, element) {
                     element.hidden = true;
                 });
                 callback();
@@ -404,7 +450,7 @@ webpg.utils = {
             switch (action) {
                 case webpg.constants.overlayActions.EXPORT:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-export")[0].hidden = false;
+                        jQuery(".webpg-menu-export")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-insert-pubkey";
                         chrome.contextMenus.create({
@@ -424,7 +470,7 @@ webpg.utils = {
                 
                 case webpg.constants.overlayActions.PSIGN:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-sign")[0].hidden = false;
+                        jQuery(".webpg-menu-sign")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-clearsign";
                         chrome.contextMenus.create({
@@ -444,7 +490,7 @@ webpg.utils = {
 
                 case webpg.constants.overlayActions.IMPORT:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-import")[0].hidden = false;
+                        jQuery(".webpg-menu-import")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-import";
                         chrome.contextMenus.create({
@@ -464,7 +510,7 @@ webpg.utils = {
 
                 case webpg.constants.overlayActions.CRYPT:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-crypt")[0].hidden = false;
+                        jQuery(".webpg-menu-crypt")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-encrypt";
                         chrome.contextMenus.create({
@@ -484,7 +530,7 @@ webpg.utils = {
 
                 case webpg.constants.overlayActions.DECRYPT:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-decrypt")[0].hidden = false;
+                        jQuery(".webpg-menu-decrypt")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-decrypt";
                         chrome.contextMenus.create({
@@ -504,7 +550,7 @@ webpg.utils = {
 
                 case webpg.constants.overlayActions.VERIF:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-verif")[0].hidden = false;
+                        jQuery(".webpg-menu-verif")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-verify";
                         chrome.contextMenus.create({
@@ -524,7 +570,7 @@ webpg.utils = {
 
                 case webpg.constants.overlayActions.OPTS:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-options")[0].hidden = false;
+                        jQuery(".webpg-menu-options")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-separator";
                         chrome.contextMenus.create({
@@ -556,7 +602,7 @@ webpg.utils = {
                     
                 case webpg.constants.overlayActions.MANAGER:
                     if (webpg.utils.detectedBrowser == "firefox") {
-                        $(".webpg-menu-manager")[0].hidden = false;
+                        jQuery(".webpg-menu-manager")[0].hidden = false;
                     } else if (webpg.utils.detectedBrowser == "chrome") {
                         var id = "webpg-context-manager";
                         chrome.contextMenus.create({
